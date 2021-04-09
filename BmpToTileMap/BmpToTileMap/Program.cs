@@ -9,27 +9,24 @@ namespace BmpToTileMap
 {
     class Program
     {
-        //  const int color_max = 1;
-        const int color_max = 2;
-        //  const int color_max = 3;
-        //  const int color_max = 4;
+        const int color_max = 1;
 
-        const int width = 160;  // TODO 動的にしたい
-        const int height = 64;  // TODO 動的にしたい
+        const int width = 384;  // TODO 動的にしたい
+        const int height= 256;  // TODO 動的にしたい
 
-        const int width_size = 6 * 8;  // 0~160
-        const int height_size = 8;  // 0~8
+        const int width_size = 48;
+        const int height_size = 32;
 
         static void Main(string[] args)
         {
-            int[] ints = new int[100000];
+            int[] ints = new int[1000000];
 
             // 1バイトずつ読み出し。
             using (BinaryReader w = new BinaryReader(File.OpenRead(@"convert.bmp")))
             {
                 try
                 {
-                    for (int i = 0; i < 100000; i++)
+                    for (int i = 0; i < 1000000; i++)
                     {
                         ints[i] = w.ReadByte();
                     }
@@ -40,7 +37,11 @@ namespace BmpToTileMap
                 }
             }
 
-            for (int color = 0; color < color_max; color++)
+            int tile_max = 1;
+            int[,] tiles = new int[256, 8];
+            int[,] tile_map = new int[height_size, width_size];
+
+            for (int color = 0; color < color_max; color++) // TODO このループはいらないけど…
             {
                 int[,] b = new int[height, width];
                 int[] gp = new int[width];
@@ -52,7 +53,8 @@ namespace BmpToTileMap
                         for (int l = 0; l < 3; l++)
                         {
                             //  int index = (20789 - i * width * 3 - j * 3 - l);    // TODO 20789がマジックナンバーすぎる 144x48
-                            int index = (30773 - i * width * 3 - j * 3 - l);    // 160x64
+                            //int index = (30773 - i * width * 3 - j * 3 - l);    // TODO 30773がマジックナンバーすぎる 160x64 30773はファイルサイズ
+                            int index = (0x48035 - i * width * 3 - j * 3 - l);    // TODO 0x48035がマジックナンバーすぎる 384x256
                             b[i, j] += ((ints[index]));
                         }
                         switch (color_max)
@@ -76,6 +78,10 @@ namespace BmpToTileMap
                 for (int j = 0; j < height / 8; j++)
                 {
                     Console.Write("\t");
+
+                    int[] diff_tile = new int[8];
+                    int tile_map_index = 0;
+
                     for (int i = 0; i < width; i++)
                     {
                         gp[i] = (byte)(
@@ -91,10 +97,12 @@ namespace BmpToTileMap
                         Console.Write("0x" + gp[i].ToString("X2"));
                         if (i == width - 1)
                         {
+                            // 終わりまで到達
                             Console.WriteLine(",");
                         }
                         else if (i % 8 == 7)
                         {
+                            // 端まで到達
                             Console.WriteLine(",");
                             Console.Write("\t");
                         }
@@ -103,7 +111,48 @@ namespace BmpToTileMap
                             Console.Write(",");
                         }
 
-                        if (i == width_size - 1)
+                        diff_tile[i % 8] = gp[i];
+                        if ( i % 8 == 7 )
+                        {
+                            // 比較データが揃った
+                            bool isDiff = false;
+                            for (int ii = 0; ii < 256; ii++)
+                            {
+                                if(ii == tile_max)
+                                {
+                                    // 未登録のタイル
+                                    tile_map[j, tile_map_index] = ii;
+                                    tile_max++;
+                                    isDiff = true;
+                                    for (int jj = 0; jj < 8; jj++)
+                                    {
+                                        tiles[ii, jj] = diff_tile[jj];
+                                    }
+                                    break;
+                                }
+                                for (int jj = 0; jj < 8; jj++)
+                                {
+                                    if (diff_tile[jj] != tiles[ii, jj])
+                                    {
+                                        break;
+                                    }
+                                    if(jj== 7)
+                                    {
+                                        // 最後までたどり着いたので同じタイル
+                                        tile_map[j, tile_map_index] = ii;
+                                        isDiff = true;
+                                    }
+                                }
+                                if (isDiff)
+                                {
+                                    break;
+                                }
+                            }
+
+                            tile_map_index++;
+                        }
+
+                        if (i == width - 1)
                         {
                             break;
                         }
@@ -116,6 +165,41 @@ namespace BmpToTileMap
                     }
                 }
                 Console.WriteLine("},");
+                Console.WriteLine("");
+
+                // タイル
+                Console.WriteLine("タイルデータ");
+                for (int i = 0; i < 256; i++)
+                {
+                    Console.Write("tiles["+i+"]={");
+                    for (int j = 0; j < 8; j++)
+                    {
+                        Console.Write("0x" + tiles[i, j].ToString("X2"));
+                        Console.Write(",");
+                    }
+                    Console.WriteLine("};");
+                }
+                Console.WriteLine("");
+
+                // マップ
+                Console.WriteLine("マップデータ");
+                for (int i = 0; i < height_size; i++)
+                {
+                    Console.Write("{");
+                    for (int j = 0; j < width_size; j++)
+                    {
+                        Console.Write("0x" + tile_map[i, j].ToString("X2"));
+                        Console.Write(",");
+                    }
+                    Console.WriteLine("},");
+                }
+                Console.WriteLine("");
+
+
+                Console.WriteLine("tile_max=");
+                Console.WriteLine(tile_max);
+
+
             }
 
             System.Threading.Thread.Sleep(100000);
