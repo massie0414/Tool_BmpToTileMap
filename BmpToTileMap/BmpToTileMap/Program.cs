@@ -12,21 +12,29 @@ namespace BmpToTileMap
         const int color_max = 1;
 
         const int width = 384;  // TODO 動的にしたい
-        const int height= 256;  // TODO 動的にしたい
+        const int height= 384;  // TODO 動的にしたい
 
         const int width_size = 48;
-        const int height_size = 32;
+        const int height_size = 48;
+
+        //const int file_size = 20789;  // 144x48
+        //const int file_size = 30773;  // 160x64
+        //const int file_size = 0x48035;  // 384x256
+        const int file_end_address = 0x6C035;  // 384x384
 
         static void Main(string[] args)
         {
-            int[] ints = new int[1000000];
+            int[] ints = new int[file_end_address + 1];
+            List<byte> tileList = new List<byte>();
+            List<byte> mapList = new List<byte>();
+
 
             // 1バイトずつ読み出し。
             using (BinaryReader w = new BinaryReader(File.OpenRead(@"convert.bmp")))
             {
                 try
                 {
-                    for (int i = 0; i < 1000000; i++)
+                    for (int i = 0; i < file_end_address+1; i++)
                     {
                         ints[i] = w.ReadByte();
                     }
@@ -37,7 +45,7 @@ namespace BmpToTileMap
                 }
             }
 
-            int tile_max = 1;
+            int tile_max = 0;
             int[,] tiles = new int[256, 8];
             int[,] tile_map = new int[height_size, width_size];
 
@@ -52,9 +60,7 @@ namespace BmpToTileMap
                     {
                         for (int l = 0; l < 3; l++)
                         {
-                            //  int index = (20789 - i * width * 3 - j * 3 - l);    // TODO 20789がマジックナンバーすぎる 144x48
-                            //int index = (30773 - i * width * 3 - j * 3 - l);    // TODO 30773がマジックナンバーすぎる 160x64 30773はファイルサイズ
-                            int index = (0x48035 - i * width * 3 - j * 3 - l);    // TODO 0x48035がマジックナンバーすぎる 384x256
+                            int index = (file_end_address - i * width * 3 - j * 3 - l);
                             b[i, j] += ((ints[index]));
                         }
                         switch (color_max)
@@ -176,6 +182,9 @@ namespace BmpToTileMap
                     {
                         Console.Write("0x" + tiles[i, j].ToString("X2"));
                         Console.Write(",");
+
+                        // ファイル出力用に書き込む
+                        tileList.Add((byte)tiles[i, j]);
                     }
                     Console.WriteLine("};");
                 }
@@ -190,6 +199,9 @@ namespace BmpToTileMap
                     {
                         Console.Write("0x" + tile_map[i, j].ToString("X2"));
                         Console.Write(",");
+
+                        // ファイル出力用に書き込む
+                        mapList.Add((byte)tile_map[i, j]);
                     }
                     Console.WriteLine("},");
                 }
@@ -199,7 +211,31 @@ namespace BmpToTileMap
                 Console.WriteLine("tile_max=");
                 Console.WriteLine(tile_max);
 
+            }
 
+            // ファイル書き込み
+            using (Stream stream = File.OpenWrite("tile.dat"))
+            {
+                // streamに書き込むためのBinaryWriterを作成
+                using (BinaryWriter writer = new BinaryWriter(stream))
+                {
+                    for (int i = 0; i < tileList.Count; i++)
+                    {
+                        writer.Write((byte)tileList[i]);
+                    }
+                }
+            }
+
+            using (Stream stream = File.OpenWrite("map.dat"))
+            {
+                // streamに書き込むためのBinaryWriterを作成
+                using (BinaryWriter writer = new BinaryWriter(stream))
+                {
+                    for (int i = 0; i < mapList.Count; i++)
+                    {
+                        writer.Write((byte)mapList[i]);
+                    }
+                }
             }
 
             System.Threading.Thread.Sleep(100000);
