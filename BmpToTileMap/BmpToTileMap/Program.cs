@@ -12,22 +12,21 @@ namespace BmpToTileMap
         const int color_max = 1;
 
         const int width = 384;  // TODO 動的にしたい
-        const int height= 384;  // TODO 動的にしたい
+        const int height= 256;  // TODO 動的にしたい
 
         const int width_size = 48;
-        const int height_size = 48;
+        const int height_size = 32;
 
-        //const int file_size = 20789;  // 144x48
-        //const int file_size = 30773;  // 160x64
-        //const int file_size = 0x48035;  // 384x256
-        const int file_end_address = 0x6C035;  // 384x384
+        //const int file_end_address = 20789;  // 144x48
+        //const int file_end_address = 30773;  // 160x64
+        const int file_end_address = 0x48035;  // 384x256   // 固定
+        //const int file_end_address = 0x6C035;  // 384x384 // 容量的に使わない予定
 
         static void Main(string[] args)
         {
             int[] ints = new int[file_end_address + 1];
             List<byte> tileList = new List<byte>();
             List<byte> mapList = new List<byte>();
-
 
             // 1バイトずつ読み出し。
             using (BinaryReader w = new BinaryReader(File.OpenRead(@"convert.bmp")))
